@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 89
+exclude = 
+    .git,
+    __pycache__,
+    */migrations/*,
+    myenv,
+    .venv,
+    ./venv
+    KMNCSProject/myenv,
+ignore =
+    E203
+    W503
