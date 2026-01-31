@@ -104,7 +104,7 @@ class Tutor(Base, TimestampMixin):
     whatsapp_enabled = Column(Boolean, default=False)
     
     # Verification
-    verification_status = Column(String, default="pending")  # pending, verified, rejected
+    verification_status = Column(String, default="verified")  # pending, verified, rejected
     verified_at = Column(DateTime, nullable=True)
     
     def __repr__(self):
