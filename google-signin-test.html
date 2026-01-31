@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sign-In Test</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .token-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        textarea {
+            width: 100%;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .api-response {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #357ae8;
+        }
+        .role-selector {
+            margin-top: 20px;
+        }
+        .role-selector label {
+            margin-right: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Google OAuth Test Page</h1>
+        <p>This page will help you test the <code>POST /auth/google</code> endpoint.</p>
+        
+        <div id="g_id_onload"
+             data-client_id="210162429486-2rptaf93d1kta4t4t08rsuoom7sls8v5.apps.googleusercontent.com"
+             data-callback="handleCredentialResponse">
+        </div>
+        
+        <div class="g_id_signin" data-type="standard"></div>
+        
+        <div id="token-section" style="display: none;">
+            <div class="token-display">
+                <h3>📋 ID Token (from Google)</h3>
+                <textarea id="id-token" rows="4" readonly></textarea>
+            </div>
+            
+            <div class="role-selector">
+                <h3>👤 Select Role</h3>
+                <label>
+                    <input type="radio" name="role" value="parent" checked> Parent
+                </label>
+                <label>
+                    <input type="radio" name="role" value="tutor"> Tutor
+                </label>
+                <label>
+                    <input type="radio" name="role" value="none"> No Role (for testing existing users)
+                </label>
+            </div>
+            
+            <button onclick="testAuthEndpoint()">🚀 Test Authentication Endpoint</button>
+        </div>
+        
+        <div id="response-section" style="display: none;">
+            <h3>📡 API Response</h3>
+            <div id="api-response" class="api-response"></div>
+        </div>
+    </div>
+
+    <script>
+        let idToken = null;
+
+        function handleCredentialResponse(response) {
+            idToken = response.credential;
+            console.log("ID Token received:", idToken);
+            
+            // Show the token
+            document.getElementById('id-token').value = idToken;
+            document.getElementById('token-section').style.display = 'block';
+        }
+
+        async function testAuthEndpoint() {
+            const roleRadios = document.getElementsByName('role');
+            let selectedRole = null;
+            
+            for (const radio of roleRadios) {
+                if (radio.checked) {
+                    selectedRole = radio.value === 'none' ? null : radio.value;
+                    break;
+                }
+            }
+
+            const payload = {
+                id_token: idToken
+            };
+            
+            if (selectedRole) {
+                payload.role = selectedRole;
+            }
+
+            console.log("Sending request:", payload);
+            
+            const responseDiv = document.getElementById('api-response');
+            responseDiv.textContent = 'Loading...';
+            responseDiv.className = 'api-response';
+            document.getElementById('response-section').style.display = 'block';
+
+            try {
+                const response = await fetch('http://localhost:8000/auth/google', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    responseDiv.className = 'api-response success';
+                    responseDiv.textContent = 
+                        '✅ SUCCESS!\n\n' +
+                        'Status: ' + response.status + '\n\n' +
+                        'Response:\n' + 
+                        JSON.stringify(data, null, 2) + '\n\n' +
+                        '🎉 JWT Token: ' + data.access_token.substring(0, 50) + '...';
+                } else {
+                    responseDiv.className = 'api-response error';
+                    responseDiv.textContent = 
+                        '❌ ERROR\n\n' +
+                        'Status: ' + response.status + '\n\n' +
+                        'Error:\n' + 
+                        JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                responseDiv.className = 'api-response error';
+                responseDiv.textContent = 
+                    '❌ NETWORK ERROR\n\n' +
+                    'Make sure the API server is running on http://localhost:8000\n\n' +
+                    'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
