@@ -13,7 +13,11 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Security
-    secret_key: str
+    secret_key: str = "dev-secret-key-change-in-production"  # Default for migrations/CI
+
+    # Google OAuth
+    google_client_id: str = ""  # Empty default for CI/CD and migrations
+    google_client_secret: str = ""  # Not used for token verification, but may be needed later
 
     # Database
     database_url: str

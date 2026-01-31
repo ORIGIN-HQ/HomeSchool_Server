@@ -67,16 +67,16 @@ async def init_db():
         try:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             conn.commit()
-            print("✅ PostGIS extension enabled")
+            print(" PostGIS extension enabled")
         except Exception as e:
-            print(f"⚠️  Could not enable PostGIS (may already exist): {e}")
+            print(f"Could not enable PostGIS (may already exist): {e}")
     
     # Import all models to ensure they're registered
     import app.db.models  # noqa
     
     # Create all tables
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created")
+    print("Database tables created")
 
 
 async def close_db():
@@ -84,4 +84,4 @@ async def close_db():
     Close database connections on shutdown.
     """
     engine.dispose()
-    print("✅ Database connections closed")
+    print("Database connections closed")

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.core.logging import setup_logging
 from app.db import init_db, close_db
+from app.api import auth_router  # Import auth router
 
 # Initialize logging
 logger = setup_logging()
@@ -24,6 +25,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
