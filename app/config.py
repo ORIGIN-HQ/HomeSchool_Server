@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # Security
     secret_key: str
 
+    # Database
+    database_url: str
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
