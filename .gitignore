@@ -1,0 +1,74 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# Virtual Environments
+.env
+.venv
+venv/
+env/
+ENV/
+.env.*
+!.env.example
+
+# FastAPI / App runtime
+*.log
+logs/
+instance/
+uploads/
+staticfiles/
+media/
+
+# Databases
+*.sqlite3
+*.db
+
+# Environment variables / secrets
+.env
+.env.local
+.env.production
+.env.staging
+.env.dev
+secrets/
+*.pem
+*.key
+
+# Uvicorn / Gunicorn
+gunicorn.pid
+uvicorn.pid
+
+# Docker
+docker-compose.override.yml
+*.docker.env
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build / Distribution
+build/
+dist/
+*.egg-info/
+
+# Tests
+
+.pytest_cache/
+.tox/
