@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # Security
     secret_key: str
 
+    # Google OAuth
+    google_client_id: str
+    google_client_secret: str = ""  # Not used for token verification, but may be needed later
+
     # Database
     database_url: str
     db_pool_size: int = 5
