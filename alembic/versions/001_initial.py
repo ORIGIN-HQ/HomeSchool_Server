@@ -76,7 +76,7 @@ def upgrade() -> None:
         sa.Column('availability', sa.String(), nullable=True),
         sa.Column('whatsapp_number', sa.String(), nullable=True),
         sa.Column('whatsapp_enabled', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('verification_status', sa.String(), nullable=False, server_default="'pending'"),
+        sa.Column('verification_status', sa.String(), nullable=False, server_default="'verified'"),
         sa.Column('verified_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
