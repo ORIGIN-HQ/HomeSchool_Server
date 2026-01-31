@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.core.logging import setup_logging
+from app.db import init_db, close_db
 
 # Initialize logging
 logger = setup_logging()
@@ -31,10 +32,17 @@ async def startup_event():
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {settings.debug}")
 
+    # Initialize database and PostGIS
+    await init_db()
+    logger.info("Database initialized with PostGIS support")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info(f"Shutting down {settings.app_name}")
+
+    # Close database connections
+    await close_db()
 
 
 @app.get("/health")
