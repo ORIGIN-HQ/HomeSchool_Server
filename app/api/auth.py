@@ -11,12 +11,14 @@ from app.db.models import User
 from app.schemas.auth import GoogleAuthRequest, AuthResponse, UserProfile
 from app.services.google_auth import google_auth_service
 from app.core.security import create_access_token
+from app.core.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 db_dep = Depends(get_db)
+CurrentUserDep = Depends(get_current_user)
 
 
 @router.post("/google", response_model=AuthResponse, status_code=status.HTTP_200_OK)
@@ -137,17 +139,55 @@ async def google_auth(
 
 
 @router.get("/me", response_model=UserProfile)
-async def get_current_user(
-    # This will be implemented in a future issue with proper JWT middleware
-    # For now, this is a placeholder
+async def get_current_user_profile(
+    current_user: dict = CurrentUserDep,
+    db: Session = db_dep,
 ):
     """
-    Get current user profile from JWT.
-
-    This endpoint will be implemented with JWT middleware in Issue #13.
-    For now, it's a placeholder.
+    Get current user profile from JWT (Issue #13).
+    
+    This endpoint allows frontend to:
+    - Check if user is authenticated
+    - Determine if user needs onboarding (onboarded=False)
+    - Get user's role to show appropriate UI
+    - Skip directly to map if onboarded=True
+    
+    Fast path for returning users:
+    1. Frontend reads JWT from storage
+    2. Calls GET /auth/me
+    3. If onboarded=True → go to map
+    4. If onboarded=False → show onboarding
+    
+    Args:
+        current_user: Authenticated user from JWT
+        db: Database session
+    
+    Returns:
+        UserProfile with current user data
+    
+    Raises:
+        HTTPException 401: Invalid or expired JWT (handled by dependency)
+        HTTPException 404: User not found
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Endpoint not yet implemented - coming in Issue #13"
+    user_id = current_user['user_id']
+    
+    # Fetch user from database
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        logger.error(f"User {user_id} not found despite valid JWT")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    logger.info(f"User profile retrieved: {user.email} (onboarded={user.onboarded})")
+    
+    return UserProfile(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+        picture=user.picture,
+        role=user.role,
+        onboarded=user.onboarded
     )
