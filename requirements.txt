@@ -2,8 +2,8 @@
 fastapi==0.112.0
 uvicorn==0.24.0
 starlette==0.37.2
-pydantic==2.0.1
-
+pydantic>=2.7.0
+pydantic-settings>=2.2.1
 # HTTP clients and tools
 httpx
 requests==2.31.0
