@@ -5,14 +5,23 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime
 
+
 class LocationData(BaseModel):
     """Location data for user pin"""
-    latitude: float = Field(..., ge=-90, le=90, description="Latitude in decimal degrees")
-    longitude: float = Field(..., ge=-180, le=180, description="Longitude in decimal degrees")
+    latitude: float = Field(
+        ..., ge=-90,
+        le=90,
+        description="Latitude in decimal degrees"
+    )
+    longitude: float = Field(
+        ..., ge=-180,
+        le=180,
+        description="Longitude in decimal degrees"
+    )
     visibility_radius_meters: Optional[int] = Field(
-        5000, 
-        ge=500, 
-        le=50000, 
+        5000,
+        ge=500,
+        le=50000,
         description="Visibility radius in meters (500m - 50km)"
     )
 
@@ -30,7 +39,7 @@ class ParentProfileCreate(BaseModel):
     """Parent profile creation request"""
     # Location (REQUIRED for Issue 5)
     location: LocationData
-    
+
     # Parent-specific fields
     children_ages: Optional[list[str]] = Field(None, description="List of children ages")
     curriculum: Optional[str] = Field(None, description="Educational curriculum")
@@ -69,7 +78,7 @@ class TutorProfileCreate(BaseModel):
     """Tutor profile creation request"""
     # Location (REQUIRED for Issue 5)
     location: LocationData
-    
+
     # Tutor-specific fields
     subjects: Optional[list[str]] = Field(None, description="Subjects taught")
     curriculum: Optional[str] = None

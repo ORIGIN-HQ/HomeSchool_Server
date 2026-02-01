@@ -40,7 +40,7 @@ def get_db():
     """
     FastAPI dependency that provides a database session.
     Automatically closes the session after the request.
-    
+
     Usage:
         @app.get("/users")
         def get_users(db: Session = Depends(get_db)):
@@ -60,7 +60,7 @@ async def init_db():
     - Enable PostGIS extension
     """
     from sqlalchemy import text
-    
+
     # Create PostGIS extension
     with engine.connect() as conn:
         # Enable PostGIS (requires superuser or extension creation privileges)
@@ -70,10 +70,10 @@ async def init_db():
             print(" PostGIS extension enabled")
         except Exception as e:
             print(f"Could not enable PostGIS (may already exist): {e}")
-    
+
     # Import all models to ensure they're registered
     import app.db.models  # noqa
-    
+
     # Create all tables
     Base.metadata.create_all(bind=engine)
     print("Database tables created")

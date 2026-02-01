@@ -14,17 +14,17 @@ settings = get_settings()
 
 class GoogleAuthService:
     """Service for verifying Google OAuth tokens"""
-    
+
     def __init__(self):
         self.google_client_id = settings.google_client_id
-    
+
     async def verify_google_token(self, token: str) -> dict:
         """
         Verify Google ID token and extract user information.
-        
+
         Args:
             token: Google ID token from OAuth flow
-            
+
         Returns:
             Dictionary containing user info from Google:
             {
@@ -33,7 +33,7 @@ class GoogleAuthService:
                 'name': str,
                 'picture': str
             }
-            
+
         Raises:
             HTTPException: If token is invalid
         """
@@ -44,22 +44,22 @@ class GoogleAuthService:
                 requests.Request(),
                 self.google_client_id
             )
-            
+
             # Token is valid, extract user info
             google_id = idinfo['sub']
             email = idinfo['email']
             name = idinfo.get('name', '')
             picture = idinfo.get('picture', '')
-            
+
             logger.info(f"Successfully verified Google token for user: {email}")
-            
+
             return {
                 'google_id': google_id,
                 'email': email,
                 'name': name,
                 'picture': picture
             }
-            
+
         except ValueError as e:
             # Token verification failed
             logger.error(f"Google token verification failed: {str(e)}")
