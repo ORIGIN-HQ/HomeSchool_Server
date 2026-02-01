@@ -9,8 +9,6 @@ click==8.1.7
 cryptography==3.4.8
 ecdsa==0.18.0
 fastapi==0.103.2
-flake8==6.0.0
-flake8-bugbear==23.7.10
 GeoAlchemy2==0.14.2
 google-auth==2.23.3
 greenlet==2.0.2
@@ -22,16 +20,13 @@ idna==3.4
 iniconfig==2.0.0
 Mako==1.2.4
 MarkupSafe==2.1.3
-mccabe==0.7.0
 packaging==23.1
 pluggy==1.3.0
 psycopg2-binary==2.9.7
 pyasn1==0.5.0
 pyasn1_modules==0.3.0
-pycodestyle==2.11.0
 pycparser==2.21
 pydantic==1.10.13
-pyflakes==3.0.1
 Pygments==2.16.1
 pytest==7.4.2
 pytest-asyncio==0.21.1
