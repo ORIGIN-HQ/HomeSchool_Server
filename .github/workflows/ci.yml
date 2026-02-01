@@ -42,8 +42,7 @@ jobs:
 
     - name: Run flake8
       run: |
-        flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        flake8 app/
 
   # Security Scan (no DB needed)
   security:
@@ -214,7 +213,7 @@ jobs:
         timeout 10 uvicorn app.main:app --host 0.0.0.0 --port 8000 &
         sleep 5
         curl -f http://localhost:8000/health || exit 1
-        echo "✅ Health check passed"
+        echo "Health check passed"
 
   # Docker Build
   docker:
