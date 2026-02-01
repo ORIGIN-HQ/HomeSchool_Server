@@ -1,16 +1,18 @@
 """
 Authentication schemas for request/response validation.
 """
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
 
 
 class GoogleAuthRequest(BaseModel):
     """Request body for Google OAuth login"""
     id_token: str = Field(..., description="Google ID token from OAuth flow")
-    role: Optional[str] = Field(None, description="User role: 'parent' or 'tutor' (set once)")
-    
+    role: Optional[str] = Field(
+        None,
+        description="User role: 'parent' or 'tutor' (set once)"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -25,7 +27,7 @@ class AuthResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field(default="bearer", description="Token type")
     user: "UserProfile"
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -50,7 +52,7 @@ class UserProfile(BaseModel):
     picture: Optional[str] = None
     role: Optional[str] = None
     onboarded: bool
-    
+
     class Config:
         from_attributes = True
 

@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 89
+max-line-length = 120
 exclude = 
     .git,
     __pycache__,
@@ -7,7 +7,8 @@ exclude =
     myenv,
     .venv,
     ./venv
-    KMNCSProject/myenv,
+    HomeSchool_Server/myenv,
+    alembic/,
 ignore =
     E203
     W503
