@@ -9,8 +9,8 @@ httpx
 requests==2.31.0
 
 # Database and ORM
-SQLAlchemy==2.0.21
-alembic==1.12.1
+SQLAlchemy>=2.0.35
+alembic>=1.13.0
 psycopg2-binary==2.9.7
 GeoAlchemy2==0.14.2
 
