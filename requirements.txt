@@ -4,6 +4,7 @@ uvicorn==0.24.0
 starlette==0.37.2
 pydantic>=2.7.0
 pydantic-settings>=2.2.1
+
 # HTTP clients and tools
 httpx
 requests==2.31.0
@@ -11,13 +12,13 @@ requests==2.31.0
 # Database and ORM
 SQLAlchemy>=2.0.35
 alembic>=1.13.0
-psycopg2-binary==2.9.7
-GeoAlchemy2==0.14.2
+psycopg2-binary>=2.9.10
+GeoAlchemy2>=0.14.2
 
 # Authentication and security
-python-jose==3.3.0
+python-jose[cryptography]==3.3.0
 google-auth==2.23.3
-cryptography==41.0.7
+cryptography>=43.0.0
 
 # Configuration and utilities
 python-dotenv==1.0.0
