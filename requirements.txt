@@ -1,8 +1,10 @@
 # Core FastAPI application dependencies
-fastapi==0.103.2
-uvicorn==0.23.2
+fastapi==0.104.1
+uvicorn==0.24.0
 starlette==0.27.0
-pydantic==1.10.13
+pydantic==2.5.0
+pydantic-core==2.14.1
+pydantic-settings==2.1.0
 
 # HTTP clients and tools
 httpx
