@@ -123,6 +123,22 @@ class Tutor(Base, TimestampMixin):
         return f"<Tutor(user_id={self.user_id}, status={self.verification_status})>"
 
 
+class ContactLog(Base, TimestampMixin):
+    """
+    Log of contact attempts between users.
+    Used for analytics and abuse prevention.
+    """
+    __tablename__ = "contact_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    target_user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    contact_method = Column(String, default="whatsapp")  # whatsapp, email, etc.
+
+    def __repr__(self):
+        return f"<ContactLog(source={self.source_user_id}, target={self.target_user_id})>"
+
+
 # Geospatial helper functions
 def create_point_from_lat_lng(latitude: float, longitude: float) -> str:
     """
@@ -155,3 +171,4 @@ def distance_meters_query(point1, point2):
         )
     """
     pass  # Implementation in queries
+
