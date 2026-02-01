@@ -9,6 +9,7 @@ from geoalchemy2.functions import ST_Distance, ST_MakeEnvelope, ST_Intersects, S
 from geoalchemy2 import Geography
 import logging
 import json
+from uuid import UUID
 
 from app.db import get_db
 from app.db.models import User, Parent, Tutor, create_point_from_lat_lng
@@ -263,7 +264,7 @@ async def get_map_pins(
 
 @router.get("/preview/{user_id}", response_model=PinPreview)
 async def get_pin_preview(
-    user_id: str,
+    user_id: UUID,
     current_user: dict = CurrentUserDep,
     db: Session = DBDep,
 ):
