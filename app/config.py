@@ -1,5 +1,5 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -24,10 +24,9 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 10
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-    )
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
 
 
 @lru_cache
