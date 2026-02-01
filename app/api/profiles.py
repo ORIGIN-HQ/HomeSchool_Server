@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy import and_
 from geoalchemy2.functions import ST_X, ST_Y
 import logging
+import uuid
 from uuid import UUID
 import json
 
@@ -230,60 +231,60 @@ async def get_full_profile(
 ):
     """
     Get full profile data for a selected user (Issue #10).
-    
+
     This endpoint returns comprehensive profile information including:
     - User's full name and photo
     - Exact location (lat/lng) - they've already consented by being on the map
     - Role-specific data (parent or tutor details)
     - WhatsApp contact (ONLY if user has enabled it)
     - Distance from requesting user
-    
+
     Privacy considerations:
     - WhatsApp number only returned if whatsapp_enabled=True
     - Only returns data for onboarded, active users
     - Cannot view your own profile (use /auth/me instead)
-    
+
     Args:
         user_id: Target user ID to fetch profile for
         current_user: Authenticated user making the request
         db: Database session
-    
+
     Returns:
         FullProfileResponse with role-specific profile data
-    
+
     Raises:
         HTTPException 404: User not found or not available
         HTTPException 400: Attempting to view own profile
     """
     requesting_user_id = current_user['user_id']
-    
+
     # Prevent viewing own profile
     if str(user_id) == requesting_user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot view your own profile. Use GET /auth/me instead."
         )
-    
+
     # Get target user (must be onboarded and active)
     user = db.query(User).filter(
         and_(
             User.id == user_id,
-            User.onboarded == True,
-            User.is_active == True,
+            User.onboarded.is_(True),
+            User.is_active.is_(True),
             User.location.isnot(None)
         )
     ).first()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found or profile not available"
         )
-    
+
     logger.info(
         f"User {requesting_user_id} viewing profile of {user_id} (role: {user.role})"
     )
-    
+
     # Calculate distance (if requesting user has location)
     distance = None
     requesting_user = db.query(User).filter(User.id == requesting_user_id).first()
@@ -291,29 +292,29 @@ async def get_full_profile(
         # Import here to avoid circular imports
         from app.api.map import calculate_distance
         distance = calculate_distance(db, requesting_user.location, user.location)
-    
+
     # Extract lat/lng from PostGIS point
     lat = db.query(ST_Y(user.location)).scalar()
     lng = db.query(ST_X(user.location)).scalar()
-    
+
     # Build role-specific profile
     if user.role == "parent":
         parent = db.query(Parent).filter(Parent.user_id == user.id).first()
-        
+
         if not parent:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Parent profile not found"
             )
-        
+
         # Parse JSON fields
         children_ages = None
         if parent.children_ages:
             try:
                 children_ages = json.loads(parent.children_ages)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 children_ages = None
-        
+
         # Build response - WhatsApp only if enabled
         profile_data = {
             "id": str(user.id),
@@ -332,37 +333,37 @@ async def get_full_profile(
             "whatsapp_enabled": parent.whatsapp_enabled,
             "created_at": parent.created_at
         }
-        
+
         return FullProfileResponse(
             type="parent",
             profile=profile_data
         )
-    
+
     elif user.role == "tutor":
         tutor = db.query(Tutor).filter(Tutor.user_id == user.id).first()
-        
+
         if not tutor:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Tutor profile not found"
             )
-        
+
         # Parse JSON fields
         subjects = None
         certifications = None
-        
+
         if tutor.subjects:
             try:
                 subjects = json.loads(tutor.subjects)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 subjects = None
-        
+
         if tutor.certifications:
             try:
                 certifications = json.loads(tutor.certifications)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 certifications = None
-        
+
         # Build response - WhatsApp only if enabled
         profile_data = {
             "id": str(user.id),
@@ -382,12 +383,12 @@ async def get_full_profile(
             "whatsapp_enabled": tutor.whatsapp_enabled,
             "created_at": tutor.created_at
         }
-        
+
         return FullProfileResponse(
             type="tutor",
             profile=profile_data
         )
-    
+
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

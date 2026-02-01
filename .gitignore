@@ -12,14 +12,18 @@ htmlcov/
 .ruff_cache/
 .dmypy.json
 
-# Virtual Environments
+# Virtual Environments & Environment Variables
 .env
+.env.local
+.env.production
+.env.staging
+.env.dev
+.env.*
+!.env.example
 .venv
 venv/
 env/
 ENV/
-.env.*
-!.env.example
 
 # FastAPI / App runtime
 *.log
@@ -33,12 +37,7 @@ media/
 *.sqlite3
 *.db
 
-# Environment variables / secrets
-.env
-.env.local
-.env.production
-.env.staging
-.env.dev
+# Secrets & Keys
 secrets/
 *.pem
 *.key
@@ -72,3 +71,6 @@ dist/
 
 .pytest_cache/
 .tox/
+
+# Development Documentation
+AGENTS.md

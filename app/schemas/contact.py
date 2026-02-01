@@ -2,7 +2,6 @@
 Contact schemas for WhatsApp integration.
 """
 from pydantic import BaseModel, Field
-from typing import Optional
 
 
 class WhatsAppLinkResponse(BaseModel):
@@ -11,11 +10,11 @@ class WhatsAppLinkResponse(BaseModel):
     phone_number: str = Field(..., description="Formatted phone number")
     prefilled_message: str = Field(..., description="Message to send")
     user_name: str = Field(..., description="Name of contact")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
-                "whatsapp_url": "https://wa.me/254712345678?text=Hi%20Sarah%2C%20I%20found%20you%20on%20Homeschool%20Connect...",
+                "whatsapp_url": "https://wa.me/254712345678?text=Hi%20Sarah%2C%20I%20found%20you...",
                 "phone_number": "+254712345678",
                 "prefilled_message": "Hi Sarah, I found you on Homeschool Connect and would love to connect!",
                 "user_name": "Sarah Johnson"
@@ -33,7 +32,7 @@ class ContactLogResponse(BaseModel):
     """Response after logging contact"""
     success: bool
     message: str = "Contact logged successfully"
-    
+
     class Config:
         json_schema_extra = {
             "example": {

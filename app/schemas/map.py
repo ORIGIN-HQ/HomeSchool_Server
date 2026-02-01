@@ -3,7 +3,6 @@ Map schemas for viewport-based queries and pin responses.
 """
 from pydantic import BaseModel, Field, validator
 from typing import Optional, Literal
-from datetime import datetime
 
 
 class MapBoundsQuery(BaseModel):
@@ -135,7 +134,7 @@ class PinPreview(BaseModel):
 
     # Contact status
     whatsapp_enabled: bool = False
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {

@@ -171,4 +171,3 @@ def distance_meters_query(point1, point2):
         )
     """
     pass  # Implementation in queries
-
