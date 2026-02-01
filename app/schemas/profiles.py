@@ -122,27 +122,27 @@ class FullParentProfile(BaseModel):
     id: str
     name: str
     picture: Optional[str] = None
-    
+
     # Location data
     latitude: float
     longitude: float
     visibility_radius_meters: int
     distance_meters: Optional[float] = None
-    
+
     # Parent-specific data
     children_ages: Optional[list[str]] = None
     curriculum: Optional[str] = None
     religion: Optional[str] = None
     in_coop: bool = False
     coop_name: Optional[str] = None
-    
+
     # Contact (only if enabled)
     whatsapp_number: Optional[str] = None
     whatsapp_enabled: bool = False
-    
+
     # Metadata
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -172,13 +172,13 @@ class FullTutorProfile(BaseModel):
     id: str
     name: str
     picture: Optional[str] = None
-    
+
     # Location data
     latitude: float
     longitude: float
     visibility_radius_meters: int
     distance_meters: Optional[float] = None
-    
+
     # Tutor-specific data
     subjects: Optional[list[str]] = None
     curriculum: Optional[str] = None
@@ -186,14 +186,14 @@ class FullTutorProfile(BaseModel):
     availability: Optional[str] = None
     verification_status: str = "pending"
     verified_at: Optional[datetime] = None
-    
+
     # Contact (only if enabled)
     whatsapp_number: Optional[str] = None
     whatsapp_enabled: bool = False
-    
+
     # Metadata
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -225,7 +225,7 @@ class FullProfileResponse(BaseModel):
     """
     type: Literal["parent", "tutor"]
     profile: dict  # Will be FullParentProfile or FullTutorProfile
-    
+
     class Config:
         json_schema_extra = {
             "example": {

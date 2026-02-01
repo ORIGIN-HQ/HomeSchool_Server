@@ -145,44 +145,44 @@ async def get_current_user_profile(
 ):
     """
     Get current user profile from JWT (Issue #13).
-    
+
     This endpoint allows frontend to:
     - Check if user is authenticated
     - Determine if user needs onboarding (onboarded=False)
     - Get user's role to show appropriate UI
     - Skip directly to map if onboarded=True
-    
+
     Fast path for returning users:
     1. Frontend reads JWT from storage
     2. Calls GET /auth/me
     3. If onboarded=True → go to map
     4. If onboarded=False → show onboarding
-    
+
     Args:
         current_user: Authenticated user from JWT
         db: Database session
-    
+
     Returns:
         UserProfile with current user data
-    
+
     Raises:
         HTTPException 401: Invalid or expired JWT (handled by dependency)
         HTTPException 404: User not found
     """
     user_id = current_user['user_id']
-    
+
     # Fetch user from database
     user = db.query(User).filter(User.id == user_id).first()
-    
+
     if not user:
         logger.error(f"User {user_id} not found despite valid JWT")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
+
     logger.info(f"User profile retrieved: {user.email} (onboarded={user.onboarded})")
-    
+
     return UserProfile(
         id=str(user.id),
         email=user.email,
