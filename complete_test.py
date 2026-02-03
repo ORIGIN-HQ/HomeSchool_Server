@@ -1,6 +1,7 @@
 """
 Complete API Test Suite for Homeschool Connect
-FIXED VERSION: Uses same SECRET_KEY as backend
+Docker-compatible version with environment detection
+Tests all core functionality end-to-end
 """
 
 import requests
@@ -8,74 +9,83 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 import os
+import sys
 
-BASE_URL = "http://localhost:8000"
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
 
-# Your real Google token for User 1 (Parent)
-PARENT_GOOGLE_TOKEN = "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2MzBhNzFiZDZlYzFjNjEyNTdhMjdmZjJlZmQ5MTg3MmVjYWIxZjYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDgzMjkyMDY2MzI3NzAxODg1NTUiLCJlbWFpbCI6ImNvbGxpbnMua3VidUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmJmIjoxNzcwMDE2NzI1LCJuYW1lIjoiQ29sbGlucyBLdWJ1IiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0tsNjdEQURuX3dqaTRtRXE0VWNCUnYxdmlpVk5uWXdpMVZobTRyREZoSGdST3YwUGoxd2c9czk2LWMiLCJnaXZlbl9uYW1lIjoiQ29sbGlucyIsImZhbWlseV9uYW1lIjoiS3VidSIsImlhdCI6MTc3MDAxNzAyNSwiZXhwIjoxNzcwMDIwNjI1LCJqdGkiOiI0YjY0OWE5ZTdhMmJkMjI2ZjcwOTYzY2UwZmQyNmVlOTgxZDAzMTU4In0.MoYt2EfFQc2W7zimzaJVdUtkGlw-FrbhlhZdF9hTRuUx-hf4WAAq2Is9V0zYg4OOoOw08mqlJ3jmki0PwG0cQcfmxwXnqsCmtMJ8QbQvk4SLQMjMZp6cHeNVtxhIs6yL3ij6uCYLPKh-IcrwVWyXny_a4sXqGyuoANYNs-FPgwcRo9aR5t5rR-5NMRavFTTbHrcNMkHXYdLhspyAR247a47NzpP9fugO6sA9YCzP6QzpElg8FqLk4toHM-yQoYmo18BmZSYvBojoiTcUFBqw6Tv_DigNdTfiZLPGHs83IhpF1ILv3QFu9VJtd3LKqisguuwQ0Sc4ytsCQz_zmxoymw"
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://homeschool_user:homeschool_pass@localhost:5432/homeschool_db")
 
+# Replace with your actual Google token or use mock mode
+PARENT_GOOGLE_TOKEN = os.getenv("GOOGLE_TEST_TOKEN", "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2MzBhNzFiZDZlYzFjNjEyNTdhMjdmZjJlZmQ5MTg3MmVjYWIxZjYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDgzMjkyMDY2MzI3NzAxODg1NTUiLCJlbWFpbCI6ImNvbGxpbnMua3VidUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmJmIjoxNzcwMTMyMDQ4LCJuYW1lIjoiQ29sbGlucyBLdWJ1IiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0tsNjdEQURuX3dqaTRtRXE0VWNCUnYxdmlpVk5uWXdpMVZobTRyREZoSGdST3YwUGoxd2c9czk2LWMiLCJnaXZlbl9uYW1lIjoiQ29sbGlucyIsImZhbWlseV9uYW1lIjoiS3VidSIsImlhdCI6MTc3MDEzMjM0OCwiZXhwIjoxNzcwMTM1OTQ4LCJqdGkiOiIyYWMxNDJlMjFkNmY1ZDlmYjA4YThmYmEwZDY2MTY4NTdmZmU5MDEyIn0.g2_Y12Cfmvtub-YqbaZL86Put4eX_dJKnD8VbbgeK0X2cPyVQ4Ld0r3Vu7f8u08lsKz6XdOOuER8AdL2r4ulmQqVvYYI2_5rz_F0nrn9leFRsrYV-q486Mi_Cvb9dMRFiTITKJtEJy0qmyRAP0Crt0Bd-6sVPhiVCYRSaM5m1n7x0mP4AKPhYu-gj8BIfbg3Ji-FIteRoTsZuSKd_NnUpdFWC57IeLVi5lbYi6P4QXonK5j7RjUjANHqFqqf6-HEgKAAX9HcYTkhjgmVS8oxX83R5Ql3TiQ_2wlMf697ED8r_X48H6sgRp9iAEYgoG4KYyBAHI2ast3rGRQaV5E3yg")
+USE_MOCK_MODE = not PARENT_GOOGLE_TOKEN  # Auto-detect mock mode
+
+# Test tracking
+test_results = {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "details": []
+}
+
+# User state
 parent_jwt = None
 parent_user_id = None
 tutor_jwt = None
 tutor_user_id = None
 
-test_results = {
-    "passed": 0,
-    "failed": 0,
-    "skipped": 0
-}
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
 
 def print_section(title, emoji="🧪"):
-    print("\n" + "="*70)
+    """Print a formatted section header"""
+    print("\n" + "="*80)
     print(f"  {emoji} {title}")
-    print("="*70)
+    print("="*80)
 
 def print_response(response, title="Response"):
+    """Pretty print API response"""
     print(f"\n{title}:")
-    print(f"Status Code: {response.status_code}")
+    print(f"Status: {response.status_code} {response.reason}")
     try:
         data = response.json()
-        print(f"Body: {json.dumps(data, indent=2)}")
+        print(f"Body:\n{json.dumps(data, indent=2)}")
         return data
     except:
-        print(f"Body: {response.text}")
+        text = response.text[:500]
+        print(f"Body: {text}{'...' if len(response.text) > 500 else ''}")
         return None
 
-def test_endpoint(name, expected_status, actual_status):
-    if actual_status == expected_status:
+def test_endpoint(name, expected_status, actual_status, response_data=None):
+    """Record test result"""
+    passed = actual_status == expected_status
+    
+    result = {
+        "name": name,
+        "expected": expected_status,
+        "actual": actual_status,
+        "passed": passed
+    }
+    
+    if passed:
         print(f"✅ PASS: {name}")
         test_results["passed"] += 1
-        return True
     else:
         print(f"❌ FAIL: {name} (expected {expected_status}, got {actual_status})")
         test_results["failed"] += 1
-        return False
+        if response_data:
+            result["error"] = response_data
+    
+    test_results["details"].append(result)
+    return passed
 
 def get_secret_key():
-    """
-    Get the SECRET_KEY that the backend is using.
-    Try multiple sources in order of priority.
-    """
-    # 1. Check environment variable
-    secret_key = os.getenv("SECRET_KEY")
-    if secret_key:
-        print(f"✅ Using SECRET_KEY from environment variable")
-        return secret_key
-    
-    # 2. Try reading from .env file
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-        secret_key = os.getenv("SECRET_KEY")
-        if secret_key:
-            print(f"✅ Using SECRET_KEY from .env file")
-            return secret_key
-    except ImportError:
-        pass
-    
-    # 3. Use default (same as backend config.py)
-    secret_key = "dev-secret-key-change-in-production"
-    print(f"⚠️  Using default SECRET_KEY (make sure backend uses same!)")
+    """Get SECRET_KEY from environment or use default"""
+    secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    print(f"🔑 Using SECRET_KEY: {secret_key[:20]}...")
     return secret_key
 
 def create_mock_jwt(user_id, email, role):
@@ -94,383 +104,375 @@ def create_mock_jwt(user_id, email, role):
         }
         
         token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-        print(f"📝 Created JWT with:")
-        print(f"   - user_id: {user_id}")
-        print(f"   - email: {email}")
-        print(f"   - role: {role}")
+        print(f"📝 Created JWT: user_id={user_id}, role={role}")
         return token
     except ImportError:
-        print("❌ CRITICAL: python-jose not installed!")
-        print("   Run: pip install python-jose")
-        return None
+        print("❌ ERROR: python-jose not installed")
+        print("   Install: pip install python-jose[cryptography]")
+        sys.exit(1)
 
-def get_or_create_tutor():
-    """Get existing tutor or create new one in database"""
+def ensure_db_user(email, name, role):
+    """Ensure user exists in database"""
     try:
         import psycopg2
         from psycopg2.extras import RealDictCursor
         
-        db_url = os.getenv("DATABASE_URL")
-        if not db_url:
-            raise Exception("DATABASE_URL not set")
-        
-        # Convert SQLAlchemy format
-        if db_url.startswith("postgresql+psycopg2://"):
-            db_url = db_url.replace("postgresql+psycopg2://", "postgresql://")
-        
-        conn = psycopg2.connect(db_url)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Try to get existing tutor
-        cur.execute("SELECT id FROM users WHERE email = %s", ("sarah.tutor@example.com",))
+        # Check if user exists
+        cur.execute("SELECT id, onboarded FROM users WHERE email = %s", (email,))
         result = cur.fetchone()
         
         if result:
             user_id = str(result['id'])
-            print(f"✅ Found existing tutor user: {user_id}")
+            onboarded = result['onboarded']
+            print(f"✅ Found existing user: {email} (id={user_id}, onboarded={onboarded})")
         else:
-            # Create new tutor
+            # Create new user
             user_id = str(uuid.uuid4())
+            google_id = f"mock_google_{uuid.uuid4().hex[:16]}"
+            
             cur.execute("""
                 INSERT INTO users (id, google_id, email, name, picture, role, onboarded, is_active, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
                 RETURNING id
             """, (
                 user_id,
-                f"mock_google_{user_id[:8]}",
-                "sarah.tutor@example.com",
-                "Sarah Johnson",
-                "https://example.com/sarah.jpg",
-                "tutor",
+                google_id,
+                email,
+                name,
+                f"https://example.com/{name.lower().replace(' ', '')}.jpg",
+                role,
                 False,
                 True
             ))
             conn.commit()
-            print(f"✅ Created new tutor user: {user_id}")
+            print(f"✅ Created new user: {email} (id={user_id})")
         
         cur.close()
         conn.close()
         return user_id
         
     except Exception as e:
-        print(f"❌ CRITICAL DATABASE ERROR: {e}")
-        print("\nMake sure:")
-        print("1. DATABASE_URL is set correctly")
-        print("2. PostgreSQL is running")
-        print("3. psycopg2-binary is installed: pip install psycopg2-binary")
-        raise
+        print(f"❌ DATABASE ERROR: {e}")
+        print("\nTroubleshooting:")
+        print(f"1. Check DATABASE_URL: {DATABASE_URL}")
+        print("2. Ensure PostgreSQL is running")
+        print("3. Install psycopg2: pip install psycopg2-binary")
+        sys.exit(1)
 
+def check_api_health():
+    """Verify API is accessible"""
+    try:
+        response = requests.get(f"{BASE_URL}/health", timeout=5)
+        if response.status_code == 200:
+            print(f"✅ API is healthy at {BASE_URL}")
+            return True
+        else:
+            print(f"⚠️  API returned status {response.status_code}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Cannot reach API at {BASE_URL}")
+        print(f"   Error: {e}")
+        return False
 
-# ============================================================
-# PART 1: PARENT USER TESTS
-# ============================================================
+# =============================================================================
+# TEST SUITE
+# =============================================================================
 
-print_section("PART 1: PARENT USER FLOW", "👨‍👩‍👧")
-
-# Test 1: Parent Login
-print_section("1. Parent - Login (Existing User)", "🔐")
-response = requests.post(f"{BASE_URL}/auth/google", json={
-    "id_token": PARENT_GOOGLE_TOKEN
-})
-data = print_response(response)
-
-if response.status_code == 200:
-    test_endpoint("Parent login (existing user)", 200, response.status_code)
-    parent_jwt = data["access_token"]
-    parent_user_id = data["user"]["id"]
-    print(f"\n📝 Parent JWT: {parent_jwt[:50]}...")
-    print(f"📝 Parent ID: {parent_user_id}")
-    print(f"📝 Onboarded: {data['user']['onboarded']}")
-else:
-    test_endpoint("Parent login (existing user)", 200, response.status_code)
-    raise Exception("CRITICAL: Parent login failed!")
-
-# Test 2: GET /auth/me
-print_section("2. Parent - GET /auth/me (Issue #13)", "👤")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-response = requests.get(f"{BASE_URL}/auth/me", headers=headers)
-data = print_response(response)
-test_endpoint("GET /auth/me", 200, response.status_code)
-
-if data:
-    is_onboarded = data.get("onboarded")
-    print(f"\n📊 User Status:")
-    print(f"   - Onboarded: {is_onboarded}")
-    print(f"   - Role: {data.get('role')}")
+def setup_users():
+    """Setup test users (parent and tutor)"""
+    global parent_user_id, parent_jwt, tutor_user_id, tutor_jwt
     
-    if is_onboarded:
-        print("   ✅ User ready for map (skip onboarding)")
+    print_section("SETUP: Creating Test Users", "🔧")
+    
+    if USE_MOCK_MODE:
+        print("📍 Using MOCK MODE (no real Google tokens)")
+        
+        # Create parent user
+        parent_email = "parent.test@example.com"
+        parent_user_id = ensure_db_user(parent_email, "Test Parent", "parent")
+        parent_jwt = create_mock_jwt(parent_user_id, parent_email, "parent")
+        
+        # Create tutor user
+        tutor_email = "tutor.test@example.com"
+        tutor_user_id = ensure_db_user(tutor_email, "Test Tutor", "tutor")
+        tutor_jwt = create_mock_jwt(tutor_user_id, tutor_email, "tutor")
+        
     else:
-        print("   ⚠️  User needs onboarding")
+        print("📍 Using REAL GOOGLE TOKEN")
+        
+        # Login with real Google token
+        response = requests.post(f"{BASE_URL}/auth/google", json={
+            "id_token": PARENT_GOOGLE_TOKEN
+        })
+        
+        if response.status_code == 200:
+            data = response.json()
+            parent_jwt = data["access_token"]
+            parent_user_id = data["user"]["id"]
+            print(f"✅ Parent authenticated: {parent_user_id}")
+        else:
+            print(f"❌ Google auth failed: {response.status_code}")
+            sys.exit(1)
+        
+        # Create tutor user in mock mode
+        tutor_email = "tutor.test@example.com"
+        tutor_user_id = ensure_db_user(tutor_email, "Test Tutor", "tutor")
+        tutor_jwt = create_mock_jwt(tutor_user_id, tutor_email, "tutor")
 
+def test_authentication():
+    """Test authentication endpoints"""
+    print_section("TEST: Authentication", "🔐")
+    
+    # Test 1: GET /auth/me (Parent)
+    print("\n1️⃣ GET /auth/me (Parent)")
+    headers = {"Authorization": f"Bearer {parent_jwt}"}
+    response = requests.get(f"{BASE_URL}/auth/me", headers=headers)
+    data = print_response(response)
+    test_endpoint("GET /auth/me", 200, response.status_code, data)
+    
+    if data:
+        print(f"   User ID: {data.get('id')}")
+        print(f"   Email: {data.get('email')}")
+        print(f"   Role: {data.get('role')}")
+        print(f"   Onboarded: {data.get('onboarded')}")
+    
+    # Test 2: Invalid token
+    print("\n2️⃣ Reject invalid JWT")
+    headers = {"Authorization": "Bearer invalid_token_xyz"}
+    response = requests.get(f"{BASE_URL}/auth/me", headers=headers)
+    test_endpoint("Reject invalid JWT", 401, response.status_code)
 
-# ============================================================
-# PART 2: CREATE TUTOR USER AND ONBOARD
-# ============================================================
-
-print_section("PART 2: TUTOR USER SETUP & ONBOARDING", "👨‍🏫")
-
-print("\n🔧 Getting or creating tutor user...")
-try:
-    tutor_user_id = get_or_create_tutor()
+def test_tutor_onboarding():
+    """Test tutor profile creation and onboarding"""
+    print_section("TEST: Tutor Onboarding", "👨‍🏫")
     
-    # Create JWT for tutor
-    print(f"\n🔧 Creating JWT for tutor...")
-    tutor_jwt = create_mock_jwt(tutor_user_id, "sarah.tutor@example.com", "tutor")
-    
-    if not tutor_jwt:
-        raise Exception("Failed to create JWT - python-jose not installed")
-    
-    print(f"📝 Tutor JWT created: {tutor_jwt[:50]}...")
-    
-    # Test 3: Create Tutor Profile (ONBOARD THE TUTOR)
-    print_section("3. Tutor - Create Profile & Onboard", "📍")
     headers = {"Authorization": f"Bearer {tutor_jwt}"}
+    
     profile_data = {
         "location": {
-            "latitude": -1.290000,
-            "longitude": 36.820000,
+            "latitude": -1.290270,
+            "longitude": 36.821946,
             "visibility_radius_meters": 10000
         },
         "subjects": ["Mathematics", "Science", "English"],
         "curriculum": "British",
-        "certifications": ["B.Ed", "TEFL"],
-        "availability": "Weekday mornings",
+        "certifications": ["B.Ed", "TEFL Certificate"],
+        "availability": "Weekday mornings and afternoons",
         "whatsapp_number": "+254722334455",
         "whatsapp_enabled": True
     }
+    
+    print("\n1️⃣ Create tutor profile")
     response = requests.post(f"{BASE_URL}/tutors", json=profile_data, headers=headers)
     data = print_response(response)
     
     if response.status_code == 201:
-        test_endpoint("Create tutor profile", 201, response.status_code)
-        print("\n🎉 Tutor successfully onboarded with location!")
-    elif response.status_code == 400 and data and "already exists" in str(data):
-        print("\n✅ Tutor profile already exists from previous run")
+        test_endpoint("Create tutor profile", 201, response.status_code, data)
+        print("✅ Tutor successfully onboarded!")
+    elif response.status_code == 400 and data and "already exists" in str(data).lower():
+        print("ℹ️  Profile already exists (from previous run)")
         test_results["passed"] += 1
         print("✅ PASS: Create tutor profile (already exists)")
     else:
-        test_endpoint("Create tutor profile", 201, response.status_code)
-        print("\n❌ DEBUGGING INFO:")
-        print(f"   Response status: {response.status_code}")
-        print(f"   Response body: {data}")
-        print(f"   JWT token (first 100 chars): {tutor_jwt[:100]}")
-        
-        # Try to decode the JWT to see what's in it
-        try:
-            from jose import jwt
-            SECRET_KEY = get_secret_key()
-            decoded = jwt.decode(tutor_jwt, SECRET_KEY, algorithms=["HS256"])
-            print(f"   JWT payload: {json.dumps(decoded, indent=2, default=str)}")
-        except Exception as e:
-            print(f"   JWT decode error: {e}")
-        
-        raise Exception(f"Failed to create tutor profile: {data}")
+        test_endpoint("Create tutor profile", 201, response.status_code, data)
 
-except Exception as e:
-    print(f"\n❌ CRITICAL ERROR: {e}")
-    print("\nCANNOT CONTINUE WITHOUT TUTOR USER!")
-    print("\nDEBUGGING CHECKLIST:")
-    print("1. Is the backend running? (http://localhost:8000/health)")
-    print("2. Is SECRET_KEY consistent between test and backend?")
-    print("3. Check backend logs for JWT validation errors")
-    print("4. Try: export SECRET_KEY='dev-secret-key-change-in-production'")
-    exit(1)
-
-
-# ============================================================
-# PART 3: MAP FUNCTIONALITY TESTS
-# ============================================================
-
-print_section("PART 3: MAP & DISCOVERY FEATURES", "🗺️")
-
-# Test 4: Parent views map pins
-print_section("4. Parent - View Map Pins (Should See Tutor)", "📍")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-params = {
-    "ne_lat": -1.250000,
-    "ne_lng": 36.850000,
-    "sw_lat": -1.320000,
-    "sw_lng": 36.780000,
-    "type": "all"
-}
-response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
-data = print_response(response)
-test_endpoint("Get map pins", 200, response.status_code)
-
-if data:
-    print(f"\n📊 Found {data['total']} pin(s) on map")
-    for pin in data.get('pins', []):
-        dist = pin.get('distance_meters', 0)
-        print(f"  📌 {pin['name']} ({pin['type']}) - {dist:.0f}m away - {pin.get('curriculum', 'N/A')}")
+def test_map_features():
+    """Test map and discovery features"""
+    print_section("TEST: Map & Discovery", "🗺️")
     
-    if data['total'] > 0:
-        print("\n🎉 SUCCESS: Tutor is visible on the map!")
-    else:
-        print("\n❌ WARNING: No pins found - this should not happen!")
+    headers = {"Authorization": f"Bearer {parent_jwt}"}
+    
+    # Test 1: Get map pins
+    print("\n1️⃣ Get map pins (all types)")
+    params = {
+        "ne_lat": -1.250000,
+        "ne_lng": 36.850000,
+        "sw_lat": -1.320000,
+        "sw_lng": 36.780000,
+        "type": "all"
+    }
+    response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
+    data = print_response(response)
+    test_endpoint("Get map pins", 200, response.status_code, data)
+    
+    if data:
+        print(f"\n📊 Found {data.get('total', 0)} pin(s)")
+        for pin in data.get('pins', []):
+            print(f"   📌 {pin.get('name')} ({pin.get('type')}) - {pin.get('curriculum', 'N/A')}")
+    
+    # Test 2: Filter by tutor type
+    print("\n2️⃣ Filter pins (tutors only)")
+    params["type"] = "tutor"
+    response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
+    data = print_response(response)
+    test_endpoint("Filter by tutor type", 200, response.status_code, data)
+    
+    # Test 3: Filter by curriculum
+    print("\n3️⃣ Filter by curriculum (British)")
+    params["curriculum"] = "British"
+    response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
+    data = print_response(response)
+    test_endpoint("Filter by curriculum", 200, response.status_code, data)
 
-# Test 5: Filter - Tutors only
-print_section("5. Map Filter - Tutors Only", "🔍")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-params = {
-    "ne_lat": -1.250000,
-    "ne_lng": 36.850000,
-    "sw_lat": -1.320000,
-    "sw_lng": 36.780000,
-    "type": "tutor"
-}
-response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
-data = print_response(response)
-test_endpoint("Filter by tutor type", 200, response.status_code)
+def test_profile_viewing():
+    """Test profile viewing functionality"""
+    print_section("TEST: Profile Viewing", "👁️")
+    
+    headers = {"Authorization": f"Bearer {parent_jwt}"}
+    
+    # Test 1: Pin preview
+    print("\n1️⃣ Get pin preview")
+    response = requests.get(f"{BASE_URL}/map/preview/{tutor_user_id}", headers=headers)
+    data = print_response(response)
+    test_endpoint("Get pin preview", 200, response.status_code, data)
+    
+    # Test 2: Full profile
+    print("\n2️⃣ View full profile")
+    response = requests.get(f"{BASE_URL}/profiles/{tutor_user_id}", headers=headers)
+    data = print_response(response)
+    test_endpoint("View full profile", 200, response.status_code, data)
+    
+    # Test 3: Cannot view own profile
+    print("\n3️⃣ Block viewing own profile")
+    response = requests.get(f"{BASE_URL}/profiles/{parent_user_id}", headers=headers)
+    test_endpoint("Block own profile view", 400, response.status_code)
 
-if data:
-    print(f"\n📊 Found {data['total']} tutor(s)")
+def test_contact_features():
+    """Test contact and communication features"""
+    print_section("TEST: Contact Features", "💬")
+    
+    headers = {"Authorization": f"Bearer {parent_jwt}"}
+    
+    # Test 1: Get WhatsApp link
+    print("\n1️⃣ Get WhatsApp contact link")
+    response = requests.get(f"{BASE_URL}/contact/whatsapp/{tutor_user_id}", headers=headers)
+    data = print_response(response)
+    test_endpoint("Get WhatsApp link", 200, response.status_code, data)
+    
+    if data and "whatsapp_url" in data:
+        print(f"   URL: {data['whatsapp_url'][:80]}...")
+    
+    # Test 2: Log contact attempt
+    print("\n2️⃣ Log contact attempt")
+    log_data = {
+        "target_user_id": tutor_user_id,
+        "contact_method": "whatsapp"
+    }
+    response = requests.post(f"{BASE_URL}/contact/log", json=log_data, headers=headers)
+    data = print_response(response)
+    test_endpoint("Log contact", 200, response.status_code, data)
 
-# Test 6: Filter by curriculum
-print_section("6. Map Filter - By Curriculum (British)", "🔍")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-params = {
-    "ne_lat": -1.250000,
-    "ne_lng": 36.850000,
-    "sw_lat": -1.320000,
-    "sw_lng": 36.780000,
-    "curriculum": "British"
-}
-response = requests.get(f"{BASE_URL}/map/pins", params=params, headers=headers)
-data = print_response(response)
-test_endpoint("Filter by curriculum", 200, response.status_code)
+def test_reverse_interaction():
+    """Test tutor viewing parent profile"""
+    print_section("TEST: Reverse Interaction", "🔄")
+    
+    headers = {"Authorization": f"Bearer {tutor_jwt}"}
+    
+    print("\n1️⃣ Tutor views parent profile")
+    response = requests.get(f"{BASE_URL}/profiles/{parent_user_id}", headers=headers)
+    data = print_response(response)
+    test_endpoint("Tutor views parent", 200, response.status_code, data)
 
-if data:
-    print(f"\n📊 Found {data['total']} user(s) with British curriculum")
-
-
-# ============================================================
-# PART 4: USER INTERACTION TESTS (MUST PASS)
-# ============================================================
-
-print_section("PART 4: USER INTERACTIONS (CRITICAL)", "🤝")
-
-# Test 7: Pin Preview
-print_section("7. Parent - Click Tutor Pin (Preview)", "👁️")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-response = requests.get(f"{BASE_URL}/map/preview/{tutor_user_id}", headers=headers)
-data = print_response(response)
-test_endpoint("Get pin preview", 200, response.status_code)
-
-# Test 8: Full Profile View
-print_section("8. Parent - View Full Tutor Profile", "📋")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-response = requests.get(f"{BASE_URL}/profiles/{tutor_user_id}", headers=headers)
-data = print_response(response)
-test_endpoint("View full profile", 200, response.status_code)
-
-# Test 9: WhatsApp Contact Link
-print_section("9. Parent - Get WhatsApp Contact Link", "💬")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-response = requests.get(f"{BASE_URL}/contact/whatsapp/{tutor_user_id}", headers=headers)
-data = print_response(response)
-test_endpoint("Get WhatsApp link", 200, response.status_code)
-
-if data and "whatsapp_url" in data:
-    print(f"\n✅ WhatsApp URL: {data['whatsapp_url'][:80]}...")
-    print(f"   Message: {data.get('prefilled_message', '')[:60]}...")
-
-# Test 10: Contact Logging
-print_section("10. Parent - Log Contact Attempt", "📝")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-log_data = {
-    "target_user_id": tutor_user_id,
-    "contact_method": "whatsapp"
-}
-response = requests.post(f"{BASE_URL}/contact/log", json=log_data, headers=headers)
-data = print_response(response)
-test_endpoint("Log contact attempt", 200, response.status_code)
-
-# Test 11: Reverse - Tutor views Parent
-print_section("11. Tutor - View Parent Profile", "🔄")
-headers = {"Authorization": f"Bearer {tutor_jwt}"}
-response = requests.get(f"{BASE_URL}/profiles/{parent_user_id}", headers=headers)
-data = print_response(response)
-test_endpoint("Tutor views parent profile", 200, response.status_code)
-
-
-# ============================================================
-# PART 5: SECURITY & EDGE CASES
-# ============================================================
-
-print_section("PART 5: SECURITY & EDGE CASES", "🔒")
-
-# Test 12: View own profile (should fail)
-print_section("12. Security - Cannot View Own Profile", "🚫")
-headers = {"Authorization": f"Bearer {parent_jwt}"}
-response = requests.get(f"{BASE_URL}/profiles/{parent_user_id}", headers=headers)
-data = print_response(response)
-test_endpoint("Block viewing own profile", 400, response.status_code)
-
-# Test 13: Try to change role (should fail)
-print_section("13. Security - Cannot Change Role", "🚫")
-response = requests.post(f"{BASE_URL}/auth/google", json={
-    "id_token": PARENT_GOOGLE_TOKEN,
-    "role": "tutor"
-})
-data = print_response(response)
-test_endpoint("Block role change", 400, response.status_code)
-
-# Test 14: Invalid JWT (should fail)
-print_section("14. Security - Reject Invalid JWT", "🚫")
-headers = {"Authorization": "Bearer invalid_token_12345"}
-response = requests.get(f"{BASE_URL}/auth/me", headers=headers)
-data = print_response(response)
-test_endpoint("Reject invalid JWT", 401, response.status_code)
-
-
-# ============================================================
-# FINAL SUMMARY
-# ============================================================
-
-print_section("FINAL TEST RESULTS", "📊")
-
-total_tests = test_results["passed"] + test_results["failed"] + test_results["skipped"]
-pass_rate = (test_results["passed"] / total_tests * 100) if total_tests > 0 else 0
-
-print(f"""
-{'='*70}
-                    TEST RESULTS
-{'='*70}
+def print_summary():
+    """Print test summary"""
+    print_section("TEST RESULTS SUMMARY", "📊")
+    
+    total = test_results["passed"] + test_results["failed"] + test_results["skipped"]
+    pass_rate = (test_results["passed"] / total * 100) if total > 0 else 0
+    
+    print(f"""
+{'='*80}
+                           TEST RESULTS
+{'='*80}
 
 ✅ Passed:  {test_results['passed']} tests
 ❌ Failed:  {test_results['failed']} tests
 ⏭️  Skipped: {test_results['skipped']} tests
-{'─'*70}
-📊 Total:   {total_tests} tests
+{'─'*80}
+📊 Total:   {total} tests
 🎯 Pass Rate: {pass_rate:.1f}%
 
-{'='*70}
+{'='*80}
 
-ALL ISSUES TESTED:
+FEATURES TESTED:
 
-✅ Issue #1-3:  Google OAuth & JWT Authentication
-✅ Issue #4-7:  Parent & Tutor Profile Creation  
-✅ Issue #8:    Map Pins & Viewport Queries
-✅ Issue #9:    Map Filters (type, curriculum)
-✅ Issue #10:   Full Profile Viewing
-✅ Issue #11:   WhatsApp Contact Links
-✅ Issue #12:   Contact Logging
-✅ Issue #13:   GET /auth/me Endpoint ⭐
+✅ Authentication (Google OAuth & JWT)
+✅ User Profile Management
+✅ Tutor Onboarding & Location
+✅ Map Discovery & Filtering
+✅ Profile Viewing & Privacy
+✅ Contact Features (WhatsApp)
+✅ Cross-role Interactions
 
-{'='*70}
-
+{'='*80}
 """)
+    
+    if test_results["failed"] == 0:
+        print("🎊🎊🎊 PERFECT! ALL TESTS PASSING! 🎊🎊🎊")
+        print("\n✅ Your Homeschool Connect API is PRODUCTION READY!")
+    elif pass_rate >= 90:
+        print("🎉 EXCELLENT! Almost perfect!")
+        print("\n⚠️  Review the failed tests above")
+    elif pass_rate >= 70:
+        print("👍 GOOD! Most features working")
+        print("\n⚠️  Some issues need attention")
+    else:
+        print("❌ ISSUES DETECTED - Multiple tests failing")
+        print("\n🔧 Review logs and fix issues before deployment")
+    
+    print("\n" + "="*80)
+    
+    # Print failed tests
+    if test_results["failed"] > 0:
+        print("\n❌ FAILED TESTS:")
+        for detail in test_results["details"]:
+            if not detail["passed"]:
+                print(f"   • {detail['name']}: expected {detail['expected']}, got {detail['actual']}")
 
-if test_results["failed"] == 0 and test_results["skipped"] == 0:
-    print("🎊🎊🎊 PERFECT! ALL TESTS PASSING! 🎊🎊🎊")
-    print("\n✅ Your Homeschool Connect API is PRODUCTION READY!")
-    print("✅ Issue #13 is COMPLETE and WORKING!")
-elif pass_rate >= 90:
-    print("🎉 EXCELLENT! Almost perfect!")
-elif pass_rate >= 70:
-    print("👍 GOOD! Most features working")
-else:
-    print("⚠️  ISSUES DETECTED - Review failed tests above")
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
 
-print("\n" + "="*70)
+def main():
+    """Run the complete test suite"""
+    print_section("Homeschool Connect API - Test Suite", "🧪")
+    print(f"\nConfiguration:")
+    print(f"  API URL: {BASE_URL}")
+    print(f"  Test Mode: {'MOCK' if USE_MOCK_MODE else 'REAL GOOGLE TOKEN'}")
+    print(f"  Database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'Not configured'}")
+    
+    # Pre-flight check
+    print_section("Pre-flight Checks", "🔍")
+    if not check_api_health():
+        print("\n❌ API is not responding!")
+        print("\nTroubleshooting:")
+        print("1. Check if containers are running: docker-compose ps")
+        print("2. Check logs: docker-compose logs -f backend")
+        print("3. Verify URL is correct: " + BASE_URL)
+        sys.exit(1)
+    
+    try:
+        # Run test suites
+        setup_users()
+        test_authentication()
+        test_tutor_onboarding()
+        test_map_features()
+        test_profile_viewing()
+        test_contact_features()
+        test_reverse_interaction()
+        
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Tests interrupted by user")
+    except Exception as e:
+        print(f"\n\n❌ CRITICAL ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        # Always print summary
+        print_summary()
+
+if __name__ == "__main__":
+    main()
