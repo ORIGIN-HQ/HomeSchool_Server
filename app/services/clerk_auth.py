@@ -1,6 +1,7 @@
 """
 Clerk JWT verification service.
 Verifies tokens issued by Clerk and extracts user information.
+ENHANCED: Supports test mode tokens for development/testing.
 """
 import logging
 import httpx
@@ -75,6 +76,11 @@ def get_signing_key(jwks: dict, kid: str) -> Optional[dict]:
 async def verify_clerk_token(token: str) -> dict:
     """
     Verify a Clerk JWT token and return the decoded payload.
+    
+    ENHANCED: Now supports test mode tokens (HS256) for development/testing.
+    Test tokens are identified by:
+    - Algorithm: HS256 (instead of RS256)
+    - Contains 'user_id' field (instead of 'sub')
 
     Clerk tokens contain:
     - sub: Clerk user ID (e.g., "user_2abc123...")
@@ -82,6 +88,11 @@ async def verify_clerk_token(token: str) -> dict:
     - first_name, last_name: User's name (if available)
     - image_url: Profile picture URL
     - Custom claims from JWT templates
+
+    Test tokens contain:
+    - user_id: Local database user UUID
+    - email: User's email
+    - role: User's role (parent/tutor)
 
     Args:
         token: The JWT token from the Authorization header
@@ -99,8 +110,39 @@ async def verify_clerk_token(token: str) -> dict:
     )
 
     try:
-        # Decode header to get the key ID (kid)
+        # Check if this is a test mode token (HS256)
         unverified_header = jwt.get_unverified_header(token)
+        algorithm = unverified_header.get("alg", "")
+
+        # Test Mode: HS256 tokens
+        if algorithm == "HS256":
+            logger.info("Test mode: Verifying HS256 token with SECRET_KEY")
+            
+            try:
+                payload = jwt.decode(
+                    token,
+                    settings.secret_key,
+                    algorithms=["HS256"],
+                    options={
+                        "verify_aud": False,
+                        "verify_iss": False,
+                        "verify_exp": True,
+                    }
+                )
+                
+                # Validate that it has the expected test token structure
+                if "user_id" not in payload:
+                    logger.warning("Test token missing 'user_id' field")
+                    raise credentials_exception
+                
+                logger.info(f"Test mode: Successfully verified token for user {payload.get('user_id')}")
+                return payload
+                
+            except JWTError as e:
+                logger.warning(f"Test token verification failed: {e}")
+                raise credentials_exception
+
+        # Production Mode: RS256 Clerk tokens
         kid = unverified_header.get("kid")
 
         if not kid:
@@ -135,7 +177,7 @@ async def verify_clerk_token(token: str) -> dict:
             }
         )
 
-        logger.info(f"Successfully verified token for user: {payload.get('sub')}")
+        logger.info(f"Successfully verified Clerk token for user: {payload.get('sub')}")
         return payload
 
     except JWTError as e:
@@ -187,10 +229,20 @@ async def get_clerk_user_info(user_id: str) -> dict:
 
 
 class ClerkAuthService:
-    """Service class for Clerk authentication operations."""
+    """
+    Service class for Clerk authentication operations.
+    
+    ENHANCED: Now supports test mode for development/testing.
+    """
 
     async def verify_token(self, token: str) -> dict:
-        """Verify a Clerk JWT token."""
+        """
+        Verify a JWT token (Clerk or test mode).
+        
+        Automatically detects token type:
+        - RS256 with 'kid' header → Clerk token
+        - HS256 → Test mode token
+        """
         return await verify_clerk_token(token)
 
     async def get_user_info(self, user_id: str) -> dict:

@@ -1,12 +1,14 @@
 """
 FastAPI dependencies for authentication and authorization.
 Uses Clerk for JWT verification with automatic user sync.
+INCLUDES TEST MODE SUPPORT for mock JWT tokens.
 """
 import logging
 import uuid
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
 
 from app.services.clerk_auth import clerk_auth_service
 from app.db import get_db
@@ -24,13 +26,18 @@ async def get_current_user(
     db: Session = db_dep,
 ) -> dict:
     """
-    Dependency to get current authenticated user from Clerk JWT.
+    Dependency to get current authenticated user from Clerk JWT or test token.
 
     This dependency:
-    1. Verifies the Clerk JWT token
-    2. Extracts user info from token + Clerk API
+    1. Verifies the JWT token (Clerk or test mode)
+    2. Extracts user info from token + Clerk API (or database for test)
     3. Creates or updates user in local database (auto-sync)
     4. Returns user data for route handlers
+
+    TEST MODE:
+    - Supports mock JWT tokens with user_id field (HS256 algorithm)
+    - Allows direct database lookup without Clerk API calls
+    - Enabled automatically when token contains user_id instead of sub
 
     Usage:
         @app.get("/protected")
@@ -46,7 +53,53 @@ async def get_current_user(
     """
     token = credentials.credentials
 
-    # Verify Clerk JWT
+    # ENHANCEMENT: Check for test mode tokens (HS256 with user_id field)
+    try:
+        unverified = jwt.get_unverified_claims(token)
+        
+        # Test mode: JWT has user_id instead of sub
+        if "user_id" in unverified and "sub" not in unverified:
+            logger.info("Test mode: Processing mock JWT token")
+            
+            from app.config import get_settings
+            settings = get_settings()
+            
+            # Verify test token with SECRET_KEY
+            try:
+                payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+            except JWTError as e:
+                logger.error(f"Test token verification failed: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials"
+                )
+            
+            user_id = payload["user_id"]
+            
+            # Look up user directly by UUID
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                logger.error(f"Test mode: User {user_id} not found in database")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found"
+                )
+            
+            logger.info(f"Test mode: Authenticated user {user.email} (role={user.role})")
+            
+            return {
+                "user_id": str(user.id),
+                "clerk_id": user.google_id or "test-mode",
+                "email": user.email,
+                "name": user.name,
+                "role": user.role,
+                "onboarded": user.onboarded,
+            }
+    except JWTError:
+        # Not a test token, continue with normal Clerk flow
+        pass
+
+    # PRODUCTION MODE: Standard Clerk JWT verification
     payload = await clerk_auth_service.verify_token(token)
 
     clerk_user_id = payload.get("sub")

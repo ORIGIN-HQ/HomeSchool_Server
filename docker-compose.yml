@@ -6,30 +6,91 @@ services:
     image: postgis/postgis:15-3.3
     container_name: homeschool_postgres
     environment:
-      POSTGRES_USER: homeschool_user
-      POSTGRES_PASSWORD: homeschool_pass
-      POSTGRES_DB: homeschool_db
+      POSTGRES_USER: ${POSTGRES_USER:-homeschool_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homeschool_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-homeschool_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Optional: initialization scripts
-      - ./init-db:/docker-entrypoint-initdb.d
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homeschool_user"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homeschool_user} -d ${POSTGRES_DB:-homeschool_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - app-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: homeschool_backend
+    environment:
+      # Application settings
+      APP_NAME: ${APP_NAME:-Homeschool API}
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-8000}
+      # Database connection
+      DATABASE_URL: postgresql://${POSTGRES_USER:-homeschool_user}:${POSTGRES_PASSWORD:-homeschool_pass}@postgres:5432/${POSTGRES_DB:-homeschool_db}
+      POSTGRES_USER: ${POSTGRES_USER:-homeschool_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homeschool_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-homeschool_db}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      # CORS Configuration
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ALLOW_CREDENTIALS: ${CORS_ALLOW_CREDENTIALS:-True}
+      CORS_ALLOW_METHODS: ${CORS_ALLOW_METHODS:-*}
+      CORS_ALLOW_HEADERS: ${CORS_ALLOW_HEADERS:-*}
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - app-network
+    # Optional: mount source code for development (remove in production)
+    # volumes:
+    #   - ./app:/app/app:ro
 
 volumes:
   postgres_data:
     driver: local
 
+networks:
+  app-network:
+    driver: bridge
+
 # To run:
-# docker-compose up -d
+# docker-compose up -d --build
 #
 # To stop:
 # docker-compose down
 #
+# To view logs:
+# docker-compose logs -f
+#
 # To reset database (WARNING: deletes all data):
 # docker-compose down -v
+#
+# To verify PostGIS:
+# docker exec -it homeschool_postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT PostGIS_Version();"
