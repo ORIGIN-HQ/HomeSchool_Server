@@ -18,9 +18,9 @@ import sys
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://homeschool_user:homeschool_pass@localhost:5432/homeschool_db")
 
-# Replace with your actual Google token or use mock mode
-PARENT_GOOGLE_TOKEN = os.getenv("GOOGLE_TEST_TOKEN", "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijg2MzBhNzFiZDZlYzFjNjEyNTdhMjdmZjJlZmQ5MTg3MmVjYWIxZjYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyMTAxNjI0Mjk0ODYtMnJwdGFmOTNkMWt0YTR0NHQwOHJzdW9vbTdzbHM4djUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDgzMjkyMDY2MzI3NzAxODg1NTUiLCJlbWFpbCI6ImNvbGxpbnMua3VidUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmJmIjoxNzcwMTMyMDQ4LCJuYW1lIjoiQ29sbGlucyBLdWJ1IiwicGljdHVyZSI6Imh0dHBzOi8vbGgzLmdvb2dsZXVzZXJjb250ZW50LmNvbS9hL0FDZzhvY0tsNjdEQURuX3dqaTRtRXE0VWNCUnYxdmlpVk5uWXdpMVZobTRyREZoSGdST3YwUGoxd2c9czk2LWMiLCJnaXZlbl9uYW1lIjoiQ29sbGlucyIsImZhbWlseV9uYW1lIjoiS3VidSIsImlhdCI6MTc3MDEzMjM0OCwiZXhwIjoxNzcwMTM1OTQ4LCJqdGkiOiIyYWMxNDJlMjFkNmY1ZDlmYjA4YThmYmEwZDY2MTY4NTdmZmU5MDEyIn0.g2_Y12Cfmvtub-YqbaZL86Put4eX_dJKnD8VbbgeK0X2cPyVQ4Ld0r3Vu7f8u08lsKz6XdOOuER8AdL2r4ulmQqVvYYI2_5rz_F0nrn9leFRsrYV-q486Mi_Cvb9dMRFiTITKJtEJy0qmyRAP0Crt0Bd-6sVPhiVCYRSaM5m1n7x0mP4AKPhYu-gj8BIfbg3Ji-FIteRoTsZuSKd_NnUpdFWC57IeLVi5lbYi6P4QXonK5j7RjUjANHqFqqf6-HEgKAAX9HcYTkhjgmVS8oxX83R5Ql3TiQ_2wlMf697ED8r_X48H6sgRp9iAEYgoG4KYyBAHI2ast3rGRQaV5E3yg")
-USE_MOCK_MODE = not PARENT_GOOGLE_TOKEN  # Auto-detect mock mode
+# FORCE MOCK MODE - No Google OAuth endpoint with Clerk
+USE_MOCK_MODE = True
+PARENT_GOOGLE_TOKEN = None  # Not used in mock mode
 
 # Test tracking
 test_results = {
@@ -187,40 +187,17 @@ def setup_users():
     
     print_section("SETUP: Creating Test Users", "🔧")
     
-    if USE_MOCK_MODE:
-        print("📍 Using MOCK MODE (no real Google tokens)")
-        
-        # Create parent user
-        parent_email = "parent.test@example.com"
-        parent_user_id = ensure_db_user(parent_email, "Test Parent", "parent")
-        parent_jwt = create_mock_jwt(parent_user_id, parent_email, "parent")
-        
-        # Create tutor user
-        tutor_email = "tutor.test@example.com"
-        tutor_user_id = ensure_db_user(tutor_email, "Test Tutor", "tutor")
-        tutor_jwt = create_mock_jwt(tutor_user_id, tutor_email, "tutor")
-        
-    else:
-        print("📍 Using REAL GOOGLE TOKEN")
-        
-        # Login with real Google token
-        response = requests.post(f"{BASE_URL}/auth/google", json={
-            "id_token": PARENT_GOOGLE_TOKEN
-        })
-        
-        if response.status_code == 200:
-            data = response.json()
-            parent_jwt = data["access_token"]
-            parent_user_id = data["user"]["id"]
-            print(f"✅ Parent authenticated: {parent_user_id}")
-        else:
-            print(f"❌ Google auth failed: {response.status_code}")
-            sys.exit(1)
-        
-        # Create tutor user in mock mode
-        tutor_email = "tutor.test@example.com"
-        tutor_user_id = ensure_db_user(tutor_email, "Test Tutor", "tutor")
-        tutor_jwt = create_mock_jwt(tutor_user_id, tutor_email, "tutor")
+    print("📍 Using MOCK MODE (test tokens)")
+    
+    # Create parent user
+    parent_email = "parent.test@example.com"
+    parent_user_id = ensure_db_user(parent_email, "Test Parent", "parent")
+    parent_jwt = create_mock_jwt(parent_user_id, parent_email, "parent")
+    
+    # Create tutor user
+    tutor_email = "tutor.test@example.com"
+    tutor_user_id = ensure_db_user(tutor_email, "Test Tutor", "tutor")
+    tutor_jwt = create_mock_jwt(tutor_user_id, tutor_email, "tutor")
 
 def test_authentication():
     """Test authentication endpoints"""
@@ -278,6 +255,41 @@ def test_tutor_onboarding():
         print("✅ PASS: Create tutor profile (already exists)")
     else:
         test_endpoint("Create tutor profile", 201, response.status_code, data)
+
+def test_parent_onboarding():
+    """Test parent profile creation and onboarding"""
+    print_section("TEST: Parent Onboarding", "👨‍👩‍👧‍👦")
+    
+    headers = {"Authorization": f"Bearer {parent_jwt}"}
+    
+    profile_data = {
+        "location": {
+            "latitude": -1.285000,
+            "longitude": 36.820000,
+            "visibility_radius_meters": 8000
+        },
+        "children_ages": ["7-8", "10-11"],  # Fixed: strings not integers
+        "curriculum": "American",
+        "religion": "Christian",
+        "whatsapp_number": "+254711223344",
+        "whatsapp_enabled": True,
+        "in_coop": False,
+        "coop_name": None
+    }
+    
+    print("\n1️⃣ Create parent profile")
+    response = requests.post(f"{BASE_URL}/parents", json=profile_data, headers=headers)
+    data = print_response(response)
+    
+    if response.status_code == 201:
+        test_endpoint("Create parent profile", 201, response.status_code, data)
+        print("✅ Parent successfully onboarded!")
+    elif response.status_code == 400 and data and "already exists" in str(data).lower():
+        print("ℹ️  Profile already exists (from previous run)")
+        test_results["passed"] += 1
+        print("✅ PASS: Create parent profile (already exists)")
+    else:
+        test_endpoint("Create parent profile", 201, response.status_code, data)
 
 def test_map_features():
     """Test map and discovery features"""
@@ -399,8 +411,9 @@ def print_summary():
 
 FEATURES TESTED:
 
-✅ Authentication (Google OAuth & JWT)
-✅ User Profile Management
+✅ Authentication (Mock JWT Tokens)
+✅ User Profile Management  
+✅ Parent Onboarding & Location
 ✅ Tutor Onboarding & Location
 ✅ Map Discovery & Filtering
 ✅ Profile Viewing & Privacy
@@ -441,7 +454,7 @@ def main():
     print_section("Homeschool Connect API - Test Suite", "🧪")
     print(f"\nConfiguration:")
     print(f"  API URL: {BASE_URL}")
-    print(f"  Test Mode: {'MOCK' if USE_MOCK_MODE else 'REAL GOOGLE TOKEN'}")
+    print(f"  Test Mode: MOCK MODE (Test Tokens)")
     print(f"  Database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'Not configured'}")
     
     # Pre-flight check
@@ -459,6 +472,7 @@ def main():
         setup_users()
         test_authentication()
         test_tutor_onboarding()
+        test_parent_onboarding()  # ← ADDED THIS LINE
         test_map_features()
         test_profile_viewing()
         test_contact_features()
