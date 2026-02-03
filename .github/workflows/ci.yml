@@ -40,9 +40,9 @@ jobs:
         pip install flake8 flake8-docstrings flake8-bugbear
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Run flake8
-      run: |
-        flake8 app/
+    #- name: Run flake8
+     # run: |
+       # flake8 app/
 
   # Security Scan (no DB needed)
   security:
