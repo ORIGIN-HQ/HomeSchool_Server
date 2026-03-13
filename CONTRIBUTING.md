@@ -1,4 +1,4 @@
-# FastAPI Backend – Setup Guide 🚀
+# FastAPI Backend – Setup Guide 
 
 This repository contains a **FastAPI-based backend API**.
 Follow the steps below to set up and run the project locally.
@@ -25,8 +25,8 @@ git --version
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/ORIGIN-HQ/HomeSchool_Server.git
+cd HomeSchool_Server
 ```
 
 ---
