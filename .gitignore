@@ -74,3 +74,26 @@ dist/
 
 # Development Documentation
 AGENTS.md
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Alembic
+alembic/versions/*.pyc
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
